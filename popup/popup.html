@@ -14,11 +14,18 @@
     <input type="checkbox" id="hideMedia" />
     <span>Hide post media</span>
   </label>
-  <label class="row">
-    <input type="checkbox" id="autoNewest" />
-    <span>Auto “Show new posts”</span>
+  <label class="row stack">
+    <span>Show new posts</span>
+    <select id="newestIntervalSec">
+      <option value="0">Off</option>
+      <option value="15">Every 15 seconds</option>
+      <option value="30">Every 30 seconds</option>
+      <option value="60">Every 1 minute</option>
+      <option value="120">Every 2 minutes</option>
+      <option value="300">Every 5 minutes</option>
+    </select>
   </label>
-  <p class="hint">Photos, videos, GIFs &amp; quote media stay hidden. Avatars, emoji, and text stay.</p>
+  <p class="hint">Media shells collapse fully (no empty gap). Avatars, emoji, and text stay. Newest refresh only runs on the interval you pick.</p>
   <script src="popup.js"></script>
 </body>
 </html>

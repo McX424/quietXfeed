@@ -4,11 +4,12 @@
   --fg: #e7e9ea;
   --muted: #8b98a5;
   --accent: #1d9bf0;
+  --field: #1e2732;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  min-width: 260px;
+  min-width: 280px;
   padding: 12px 14px 14px;
   font: 13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
@@ -30,10 +31,25 @@ header strong { font-size: 14px; }
   cursor: pointer;
   user-select: none;
 }
-.row input {
+.row.stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  cursor: default;
+}
+.row input[type="checkbox"] {
   width: 16px;
   height: 16px;
   accent-color: var(--accent);
+}
+select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #2f3b47;
+  background: var(--field);
+  color: var(--fg);
+  font: inherit;
 }
 .hint {
   margin: 8px 0 0;

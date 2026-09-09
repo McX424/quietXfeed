@@ -1,8 +1,12 @@
 (() => {
   "use strict";
 
-  const DEFAULTS = { hideMedia: true, autoNewest: true };
+  // newestIntervalSec: 0 = off; else period in seconds
+  const DEFAULTS = { hideMedia: true, newestIntervalSec: 30 };
+  const INTERVAL_CHOICES = [0, 15, 30, 60, 120, 300];
+
   let settings = { ...DEFAULTS };
+  let newestTimer = 0;
 
   const MEDIA_SELECTORS = [
     '[data-testid="tweetPhoto"]',
@@ -13,14 +17,12 @@
     '[data-testid="card.layoutSmall.media"]'
   ];
 
-  const NEW_POSTS_RE =
-    /^(show|see|view)\s+new\s+posts?$/i;
+  const NEW_POSTS_RE = /^(show|see|view)\s+new\s+posts?$/i;
 
   function isAvatarOrEmoji(el) {
     if (!el || !el.closest) return false;
     if (el.closest('[data-testid^="UserAvatar-Container"]')) return true;
     if (el.closest('div[data-testid="Tweet-User-Avatar"]')) return true;
-    // Twemoji / emoji images
     if (el.tagName === "IMG") {
       const alt = (el.getAttribute("alt") || "").trim();
       if (alt.length <= 4 && /\p{Extended_Pictographic}/u.test(alt)) return true;
@@ -30,62 +32,109 @@
     return false;
   }
 
-  function markMediaInTweet(tweet) {
-    if (!tweet || tweet.dataset.qxfMedia === "1") return;
-    for (const sel of MEDIA_SELECTORS) {
-      tweet.querySelectorAll(sel).forEach((node) => {
-        if (isAvatarOrEmoji(node)) return;
-        node.classList.add("qxf-hidden-media");
-      });
+  /** Climb to the aspect-ratio / media grid shell so the empty box collapses. */
+  function mediaShell(node, tweet) {
+    let target = node;
+    let el = node;
+    for (let i = 0; i < 10 && el && el !== tweet; i++) {
+      const testId = el.getAttribute("data-testid") || "";
+      const style = el.getAttribute("style") || "";
+      if (
+        testId === "tweetPhoto" ||
+        testId === "videoPlayer" ||
+        testId === "videoComponent" ||
+        testId === "previewInterstitial" ||
+        testId === "card.layoutLarge.media" ||
+        testId === "card.layoutSmall.media"
+      ) {
+        target = el;
+      }
+      if (/padding-bottom\s*:/i.test(style) || /aspect-ratio\s*:/i.test(style)) {
+        target = el;
+      }
+      el = el.parentElement;
     }
-    // Generic: large inline images / videos that aren't avatars
-    tweet.querySelectorAll("img, video").forEach((node) => {
+    // One more level: media grid / carousel parent (no tweet text inside)
+    const parent = target.parentElement;
+    if (
+      parent &&
+      parent !== tweet &&
+      !parent.querySelector('[data-testid="tweetText"]') &&
+      !parent.querySelector('[data-testid^="UserAvatar"]') &&
+      parent.querySelector(
+        '[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="videoComponent"], video'
+      )
+    ) {
+      const kids = [...parent.children];
+      const mediaKids = kids.filter((k) =>
+        k.querySelector(
+          '[data-testid="tweetPhoto"], [data-testid="videoPlayer"], [data-testid="videoComponent"], video'
+        ) ||
+        MEDIA_SELECTORS.some((sel) => k.matches?.(sel) || k.querySelector?.(sel))
+      );
+      if (mediaKids.length && mediaKids.length === kids.length) {
+        target = parent;
+      }
+    }
+    return target;
+  }
+
+  function hideShell(node, tweet) {
+    if (!node || isAvatarOrEmoji(node)) return;
+    const shell = mediaShell(node, tweet);
+    if (!shell || isAvatarOrEmoji(shell)) return;
+    shell.classList.add("qxf-hidden-media");
+    shell.setAttribute("aria-hidden", "true");
+  }
+
+  function markMediaInTweet(tweet) {
+    if (!tweet) return;
+    for (const sel of MEDIA_SELECTORS) {
+      tweet.querySelectorAll(sel).forEach((node) => hideShell(node, tweet));
+    }
+    tweet.querySelectorAll("video").forEach((node) => {
       if (isAvatarOrEmoji(node)) return;
-      if (node.closest('[data-testid^="UserAvatar-Container"]')) return;
-      if (node.closest('a[role="link"][href*="/photo/1"]') && node.closest('[data-testid="tweetPhoto"]')) {
-        node.classList.add("qxf-hidden-media");
-        return;
-      }
-      // Video tags inside tweets
-      if (node.tagName === "VIDEO") {
-        const host =
-          node.closest('[data-testid="videoPlayer"]') ||
+      hideShell(
+        node.closest('[data-testid="videoPlayer"]') ||
           node.closest('[data-testid="videoComponent"]') ||
-          node.parentElement;
-        if (host) host.classList.add("qxf-hidden-media");
-        return;
-      }
-      // Photos often sit in a link to /status/.../photo/
-      const link = node.closest('a[href*="/photo/"]');
-      if (link && !isAvatarOrEmoji(node)) {
-        const box =
-          node.closest('[data-testid="tweetPhoto"]') ||
-          link.parentElement ||
-          node;
-        box.classList.add("qxf-hidden-media");
-      }
+          node,
+        tweet
+      );
+    });
+    tweet.querySelectorAll('a[href*="/photo/"]').forEach((link) => {
+      if (isAvatarOrEmoji(link)) return;
+      if (link.closest('[data-testid^="UserAvatar"]')) return;
+      hideShell(
+        link.closest('[data-testid="tweetPhoto"]') || link.parentElement || link,
+        tweet
+      );
     });
     tweet.dataset.qxfMedia = "1";
   }
 
   function sweepMedia() {
-    if (!settings.hideMedia) return;
-    document
-      .querySelectorAll('article[data-testid="tweet"]')
-      .forEach((tweet) => {
-        // allow re-scan if tweet DOM grew
-        if (tweet.dataset.qxfMedia === "1") {
-          // light re-check for new media nodes without full remount
-          const dirty = MEDIA_SELECTORS.some((sel) =>
-            [...tweet.querySelectorAll(sel)].some(
-              (n) => !n.classList.contains("qxf-hidden-media") && !isAvatarOrEmoji(n)
-            )
-          );
-          if (!dirty) return;
-          delete tweet.dataset.qxfMedia;
-        }
-        markMediaInTweet(tweet);
+    if (!settings.hideMedia) {
+      document.querySelectorAll(".qxf-hidden-media").forEach((n) => {
+        n.classList.remove("qxf-hidden-media");
+        n.removeAttribute("aria-hidden");
       });
+      document
+        .querySelectorAll('article[data-testid="tweet"]')
+        .forEach((t) => delete t.dataset.qxfMedia);
+      return;
+    }
+    document.querySelectorAll('article[data-testid="tweet"]').forEach((tweet) => {
+      if (tweet.dataset.qxfMedia === "1") {
+        const dirty = MEDIA_SELECTORS.some((sel) =>
+          [...tweet.querySelectorAll(sel)].some(
+            (n) => !n.closest(".qxf-hidden-media") && !isAvatarOrEmoji(n)
+          )
+        );
+        if (!dirty) return;
+        delete tweet.dataset.qxfMedia;
+      }
+      markMediaInTweet(tweet);
+    });
   }
 
   function applyHideClass() {
@@ -93,8 +142,6 @@
   }
 
   function clickShowNewPosts() {
-    if (!settings.autoNewest) return false;
-    // Prefer role=button with matching text
     const candidates = document.querySelectorAll(
       'div[role="button"], button, a[role="link"]'
     );
@@ -102,101 +149,93 @@
       const text = (el.innerText || el.textContent || "").trim().replace(/\s+/g, " ");
       if (!text || text.length > 40) continue;
       if (!NEW_POSTS_RE.test(text)) continue;
-      // Avoid profile / nav chrome
       if (el.closest('nav, [data-testid="sidebarColumn"]')) continue;
       try {
         el.click();
         return true;
-      } catch (_) {
-        /* ignore */
-      }
+      } catch (_) {}
     }
-    // Aria / data labels
     for (const el of document.querySelectorAll("[aria-label]")) {
       const label = (el.getAttribute("aria-label") || "").trim();
-      if (NEW_POSTS_RE.test(label)) {
-        try {
-          el.click();
-          return true;
-        } catch (_) {}
-      }
+      if (!NEW_POSTS_RE.test(label)) continue;
+      try {
+        el.click();
+        return true;
+      } catch (_) {}
     }
     return false;
   }
 
-  let lastNudge = 0;
   function softTopNudge() {
-    if (!settings.autoNewest) return;
-    const now = Date.now();
-    if (now - lastNudge < 4000) return;
-    // Only nudge if user is near the top of the timeline
     const y = window.scrollY || document.documentElement.scrollTop || 0;
     if (y > 120) return;
-    lastNudge = now;
-    // Tiny scroll to encourage virtualized list to paint new items after toast click
     window.scrollBy(0, -1);
     requestAnimationFrame(() => window.scrollBy(0, 1));
   }
 
-  let toastTimer = 0;
-  function scheduleNewestPass() {
-    if (toastTimer) return;
-    toastTimer = window.setTimeout(() => {
-      toastTimer = 0;
-      if (clickShowNewPosts()) softTopNudge();
-    }, 300);
+  function newestPass() {
+    if (!settings.newestIntervalSec) return;
+    if (clickShowNewPosts()) softTopNudge();
+  }
+
+  function restartNewestTimer() {
+    if (newestTimer) {
+      clearInterval(newestTimer);
+      newestTimer = 0;
+    }
+    const sec = Number(settings.newestIntervalSec) || 0;
+    if (sec <= 0) return;
+    // First pass after a short delay, then on the chosen period only
+    window.setTimeout(newestPass, 800);
+    newestTimer = window.setInterval(newestPass, sec * 1000);
+  }
+
+  function normalizeSettings(cur) {
+    let hideMedia = cur.hideMedia !== false;
+    let newestIntervalSec = cur.newestIntervalSec;
+    // Migrate v1.0.0 autoNewest boolean
+    if (newestIntervalSec === undefined) {
+      if (cur.autoNewest === false) newestIntervalSec = 0;
+      else newestIntervalSec = 30;
+    }
+    newestIntervalSec = Number(newestIntervalSec);
+    if (!INTERVAL_CHOICES.includes(newestIntervalSec)) {
+      newestIntervalSec = 30;
+    }
+    return { hideMedia, newestIntervalSec };
   }
 
   function loadSettings(cb) {
-    chrome.storage.sync.get(DEFAULTS, (cur) => {
-      settings = {
-        hideMedia: cur.hideMedia !== false,
-        autoNewest: cur.autoNewest !== false
-      };
-      applyHideClass();
-      if (settings.hideMedia) {
-        document
-          .querySelectorAll('article[data-testid="tweet"]')
-          .forEach((t) => delete t.dataset.qxfMedia);
+    chrome.storage.sync.get(
+      { hideMedia: true, newestIntervalSec: 30, autoNewest: true },
+      (cur) => {
+        settings = normalizeSettings(cur);
+        applyHideClass();
         sweepMedia();
+        restartNewestTimer();
+        if (cb) cb();
       }
-      if (cb) cb();
-    });
+    );
   }
 
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== "sync") return;
-    if (changes.hideMedia || changes.autoNewest) loadSettings();
+    if (changes.hideMedia || changes.newestIntervalSec || changes.autoNewest) {
+      loadSettings();
+    }
   });
 
-  const observer = new MutationObserver((mutations) => {
-    let mediaRelevant = false;
-    let toastRelevant = false;
-    for (const m of mutations) {
-      if (m.type === "childList" && (m.addedNodes.length || m.removedNodes.length)) {
-        mediaRelevant = true;
-        toastRelevant = true;
-      } else if (m.type === "characterData" || m.type === "attributes") {
-        toastRelevant = true;
-      }
-    }
-    if (mediaRelevant && settings.hideMedia) sweepMedia();
-    if (toastRelevant && settings.autoNewest) scheduleNewestPass();
+  const observer = new MutationObserver(() => {
+    if (settings.hideMedia) sweepMedia();
   });
 
   function start() {
     loadSettings(() => {
       observer.observe(document.documentElement, {
         childList: true,
-        subtree: true,
-        characterData: true
+        subtree: true
       });
       sweepMedia();
-      scheduleNewestPass();
-      // Periodic toast check — X sometimes updates without useful mutations
-      setInterval(() => {
-        if (settings.autoNewest) scheduleNewestPass();
-      }, 2500);
     });
   }
 

@@ -1,9 +1,11 @@
 {
   "manifest_version": 3,
   "name": "quietXfeed",
-  "version": "1.0.0",
-  "description": "Hide posted media on X Home, keep text and icons, and stay on newest posts.",
-  "permissions": ["storage"],
+  "version": "1.1.0",
+  "description": "Hide X post media (no empty gaps) and optionally refresh newest posts on an interval.",
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*"
@@ -32,8 +34,12 @@
         "https://x.com/*",
         "https://twitter.com/*"
       ],
-      "js": ["content/timeline.js"],
-      "css": ["content/timeline.css"],
+      "js": [
+        "content/timeline.js"
+      ],
+      "css": [
+        "content/timeline.css"
+      ],
       "run_at": "document_idle"
     }
   ]

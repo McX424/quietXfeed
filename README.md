@@ -2,9 +2,9 @@
 
 Chromium (Manifest V3) extension for [X](https://x.com) / [twitter.com](https://twitter.com).
 
-Quieter Home timeline: hide **posted** photos, videos, GIFs, and quote-tweet media — keep avatars, emoji, badges, and normal text. Optionally keep the feed on **newest** posts by auto-clicking the “Show new posts” control when it appears.
+Quieter Home timeline: hide **posted** photos, videos, GIFs, and quote-tweet media — **collapse the whole media shell** so no empty box remains. Keep avatars, emoji, badges, and text. Optionally click **Show new posts** on a chosen interval.
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 
 ## Install (from source)
 
@@ -13,35 +13,23 @@ Quieter Home timeline: hide **posted** photos, videos, GIFs, and quote-tweet med
 3. Turn on **Developer mode**.
 4. **Load unpacked** → select this folder (the one with `manifest.json`).
 5. Open [x.com](https://x.com/home) and refresh.
+6. After updates: **Reload** the extension on `chrome://extensions`, then refresh X.
 
 ## Use
 
 Click the extension icon:
 
-| Toggle | Default | Effect |
-|--------|---------|--------|
-| **Hide post media** | On | Hides photos / videos / GIFs / quote media in timeline posts |
-| **Auto “Show new posts”** | On | Clicks the floating “Show new posts” (or similar) toast; light top nudge so new posts paint |
-
-Settings sync via `chrome.storage.sync`.
+| Setting | Default | Effect |
+|---------|---------|--------|
+| **Hide post media** | On | Collapses photos / videos / GIFs / quote media (no blank gap) |
+| **Show new posts** | Every 30 seconds | Off / 15s / 30s / 1m / 2m / 5m — clicks the toast only on that period |
 
 ## What it does **not** do
 
 - Does not hide profile avatars, emoji, or verified badges
-- Does not hard-reload the tab in a loop
-- Does not guarantee coverage on every X UI experiment (markup changes often)
-- Media on non-timeline surfaces (e.g. some overlays) may still appear
-
-## How it works
-
-- Content script + CSS on `x.com` / `twitter.com`
-- `MutationObserver` re-applies hide rules as tweets virtualize in
-- Resilient selectors (`data-testid` media nodes + `/photo/` links + `video`) with avatar/emoji exclusions
-- Periodic toast scan for “Show/See/View new posts”
-
-## Development
-
-Edit files → **Reload** the extension on `chrome://extensions` → hard-refresh X.
+- Does not hard-reload the tab
+- Does not poll “Show new posts” on every DOM mutation (interval only)
+- X markup changes often; some layouts may need a selector tweak
 
 ## License
 
