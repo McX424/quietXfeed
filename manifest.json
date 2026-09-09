@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "quietXfeed",
   "version": "1.1.0",
-  "description": "Hide X post media (no empty gaps) and optionally refresh newest posts on an interval.",
+  "description": "Collapse X post media (no empty gaps) and refresh newest posts on a schedule. Avatars and text stay.",
   "permissions": [
     "storage"
   ],

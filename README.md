@@ -1,36 +1,64 @@
 # quietXfeed
 
-Chromium (Manifest V3) extension for [X](https://x.com) / [twitter.com](https://twitter.com).
+A Chromium extension that makes the X (Twitter) Home timeline easier to read: post photos, videos, and GIFs are removed and their layout shells collapsed, while avatars, emoji, badges, and text stay intact. Optionally, **Show new posts** is clicked on a schedule you choose so the feed stays near the top without constant polling.
 
-Quieter Home timeline: hide **posted** photos, videos, GIFs, and quote-tweet media — **collapse the whole media shell** so no empty box remains. Keep avatars, emoji, badges, and text. Optionally click **Show new posts** on a chosen interval.
+Works on `x.com` and `twitter.com` (Manifest V3).
 
-**Version:** 1.1.0
+## Features
 
-## Install (from source)
+- **Hide post media** — photos, videos, GIFs, and quote-tweet media are hidden and the empty media box is collapsed (no blank gap)
+- **Keep chrome** — profile avatars, emoji, verified badges, and normal post formatting remain
+- **Newest posts on an interval** — Off, 15s, 30s, 1m, 2m, or 5m (default 30s); clicks the “Show new posts” control only on that period
+- **Simple popup** — toggles for media hide and refresh interval; settings sync via `chrome.storage`
 
-1. Clone or download this repo.
-2. Open `chrome://extensions` (or Edge `edge://extensions`).
-3. Turn on **Developer mode**.
-4. **Load unpacked** → select this folder (the one with `manifest.json`).
-5. Open [x.com](https://x.com/home) and refresh.
-6. After updates: **Reload** the extension on `chrome://extensions`, then refresh X.
+## Install
+
+### From source (unpacked)
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/McX424/quietXfeed.git
+   cd quietXfeed
+   ```
+2. Open `chrome://extensions` (Chrome / Chromium) or `edge://extensions` (Edge).
+3. Enable **Developer mode**.
+4. Click **Load unpacked** and select this repository folder (the directory that contains `manifest.json`).
+5. Open [x.com/home](https://x.com/home) and refresh the page.
+
+### Omarchy / Chromium `--load-extension`
+
+If your browser is launched with `--load-extension=…`, append the path to this repo (for example `~/Projects/quietXfeed`) to that flag list, then restart the browser.
 
 ## Use
 
-Click the extension icon:
+Click the **quietXfeed** toolbar icon:
 
-| Setting | Default | Effect |
-|---------|---------|--------|
-| **Hide post media** | On | Collapses photos / videos / GIFs / quote media (no blank gap) |
-| **Show new posts** | Every 30 seconds | Off / 15s / 30s / 1m / 2m / 5m — clicks the toast only on that period |
+| Control | Default | Description |
+|---------|---------|-------------|
+| Hide post media | On | Collapse posted media and quote-tweet media |
+| Show new posts | Every 30 seconds | How often to click the newest-posts control when it appears |
 
-## What it does **not** do
+Changes apply on the next interval tick or after a page refresh.
 
-- Does not hide profile avatars, emoji, or verified badges
-- Does not hard-reload the tab
-- Does not poll “Show new posts” on every DOM mutation (interval only)
-- X markup changes often; some layouts may need a selector tweak
+## Update
+
+```bash
+git -C /path/to/quietXfeed pull
+```
+
+Then either **Reload** the extension on `chrome://extensions`, or restart Chromium if you load it via `--load-extension`. Refresh X afterward.
+
+## Limitations
+
+- X changes DOM markup often; selectors may need updates after major site changes.
+- Surfaces outside the main timeline may still show media in some layouts.
+- The extension does not hard-reload the tab and does not click “Show new posts” on every DOM mutation—only on your chosen interval.
+- Not published to the Chrome Web Store yet; install from source as above.
+
+## Privacy
+
+quietXfeed only requests `storage` plus host access to `x.com` / `twitter.com`. It does not send data to third-party servers.
 
 ## License
 
-MIT © McX424
+MIT © [McX424](https://github.com/McX424)
