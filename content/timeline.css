@@ -1,0 +1,11 @@
+/* quietXfeed — hide posted media; leave avatars / emoji / badges alone */
+
+html.qxf-hide-media article[data-testid="tweet"] [data-testid="tweetPhoto"],
+html.qxf-hide-media article[data-testid="tweet"] [data-testid="videoPlayer"],
+html.qxf-hide-media article[data-testid="tweet"] [data-testid="videoComponent"],
+html.qxf-hide-media article[data-testid="tweet"] [data-testid="previewInterstitial"],
+html.qxf-hide-media article[data-testid="tweet"] div[data-testid="card.layoutLarge.media"],
+html.qxf-hide-media article[data-testid="tweet"] div[data-testid="card.layoutSmall.media"],
+html.qxf-hide-media article[data-testid="tweet"] .qxf-hidden-media {
+  display: none !important;
+}
