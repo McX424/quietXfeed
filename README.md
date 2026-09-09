@@ -1,4 +1,4 @@
-# QuietFeed
+# quietXfeed
 
 Chromium extension for [X](https://x.com) — quieter timeline, same conversation.
 
